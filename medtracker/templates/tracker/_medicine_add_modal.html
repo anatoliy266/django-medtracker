@@ -1,0 +1,53 @@
+<dialog id="addMedicineModal" class="dialog">
+    <div class="dialog-header">
+        <h5 class="dialog-title fw-bold">Новое лекарство</h5>
+        <button type="button" class="btn-close" onclick="document.getElementById('addMedicineModal').close()" aria-label="Close"></button>
+    </div>
+    <form id="addMedicineForm" data-url="{% url 'tracker:api-medicines-list' %}">
+        <div class="dialog-body">
+            {% csrf_token %}
+            <div class="mb-3">
+                <label for="medName" class="form-label small text-uppercase fw-bold text-muted">Название</label>
+                <input type="text" name="name" class="form-control" id="medName" required placeholder="Например, Аспирин">
+            </div>
+            <div class="mb-3">
+                <label for="medDosage" class="form-label small text-uppercase fw-bold text-muted">Дозировка</label>
+                <input type="text" name="dosage" class="form-control" id="medDosage" required placeholder="Например, 500 мг">
+            </div>
+
+            <!-- Переключатель режима частоты приема -->
+            <div class="mb-2">
+                <label class="form-label small text-uppercase fw-bold text-muted d-block">Режим приема</label>
+                <div class="btn-group w-100" role="group">
+                    <input type="radio" class="btn-check" name="freq_mode" id="modeText" value="text" checked>
+                    <label class="btn btn-outline-secondary btn-sm" for="modeText">Свободный текст</label>
+
+                    <input type="radio" class="btn-check" name="freq_mode" id="modeSchedule" value="schedule">
+                    <label class="btn btn-outline-secondary btn-sm" for="modeSchedule">По расписанию</label>
+                </div>
+            </div>
+
+            <!-- Блок 1: Свободный текст -->
+            <div id="textFreqBlock" class="mb-3">
+                <input type="text" name="frequency" class="form-control" id="medFrequency" placeholder="Например, 2 раза в день после еды">
+            </div>
+
+            <!-- Блок 2: По расписанию (скрыт по умолчанию) -->
+            <div id="scheduleFreqBlock" class="mb-3 d-none">
+                <div id="timeInputsContainer" class="d-flex flex-column gap-2 mb-2">
+                    <!-- Сюда JS будет добавлять строки с input[type="time"] -->
+                </div>
+                <button type="button" id="addTimeRowBtn" class="btn btn-outline-primary btn-sm w-100">
+                    + Добавить время
+                </button>
+            </div>
+
+            <div id="formErrors" class="text-danger small mb-2"></div>
+        </div>
+        <div class="dialog-footer">
+            <button type="submit" class="btn-solid theme-secondary">Сохранить</button>
+        </div>
+    </form>
+</dialog>
+
+

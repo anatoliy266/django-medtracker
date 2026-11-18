@@ -1,0 +1,64 @@
+
+name: django-web-app-medtracker
+services:
+  postgres:
+    image: postgres:17
+    container_name: django-postgres
+    ports:
+      - "5432:5432"
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./postgres_conf/postgresql.conf:/etc/postgresql.conf:ro
+      - ./postgres_conf/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+      - ./postgres_conf/initdb:/docker-entrypoint-initdb.d:ro
+    command: ["postgres", "-c", "config_file=/etc/postgresql.conf"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - cluster
+
+  web:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.web
+    container_name: django-web
+    command: gunicorn settings.wsgi:application --bind 0.0.0.0:1289 --workers 3
+    ports:
+      - "1289:1289"
+    volumes:
+      - ./medtracker:/web/medtracker
+      - ./requirements.txt:/web/medtracker/requirements.txt
+      - pip_cache:/root/.cache/pip
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - cluster
+  redis:
+    image: redis:7-alpine
+    container_name: django-redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - cluster
+
+volumes:
+  postgres_data:
+  pip_cache:
+
+networks:
+  cluster:
+    driver: bridge

@@ -1,0 +1,9 @@
+services:
+  web:
+    networks:
+      - cluster
+      - warp-net
+
+networks:
+  warp-net:
+    external: true

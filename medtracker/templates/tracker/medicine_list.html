@@ -1,0 +1,324 @@
+{% extends 'layout/layout.html' %}
+{% block title %}{{ title }} — Medicine Tracker{% endblock %}
+
+{% block breadcrumbs %}
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'main:index' %}" class="text-decoration-none">Главная</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Трекер</li>
+    </ol>
+</nav>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="h3 fw-bold">{{ title }}</h1>
+    <button type="button" id="openAddModalBtn" class="btn-solid theme-primary btn-sm" command="show-modal"
+        commandfor="addMedicineModal">
+        + Добавить лекарство
+    </button>
+</div>
+
+<!-- Список лекарств -->
+<div id="medicine-list-container" class="row g-3">
+    {% for med in medicines %}
+    <div class="col-12 md:col-6 lg:col-4" id="medicine-card-{{ med.id }}">
+        <div class="card h-100 shadow-sm border-0">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h5 class="card-title fw-bold mb-0">{{ med.name }}</h5>
+                    
+                    <button type="button" 
+                            class="btn btn-link text-muted p-0 border-0 shadow-none" 
+                            data-bs-toggle="menu" 
+                            data-bs-placement="bottom-end" 
+                            aria-expanded="false" 
+                            title="Настройки">
+                        <svg xmlns="http://w3.org" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M8 4.754a3.246 3.246 0 1 0 0 6.492 3.246 3.246 0 0 0 0-6.492zM5.754 8a2.246 2.246 0 1 1 4.492 0 2.246 2.246 0 0 1-4.492 0z"/>
+                            <path d="M9.796 1.343c-.527-1.79-3.065-1.79-3.592 0l-.094.319a.873.873 0 0 1-1.255.52l-.292-.16c-1.64-.892-3.433.902-2.54 2.541l.159.292a.873.873 0 0 1-.52 1.255l-.319.094c-1.79.527-1.79 3.065 0 3.592l.319.094a.873.873 0 0 1 .52 1.255l-.16.292c-.892 1.64.901 3.434 2.541 2.54l.292-.159a.873.873 0 0 1 1.255.52l.094.319c.527 1.79 3.065 1.79 3.592 0l.094-.319a.873.873 0 0 1 1.255-.52l.292.16c1.64.893 3.434-.902 2.54-2.541l-.159-.292a.873.873 0 0 1 .52-1.255l.319-.094c1.79-.527 1.79-3.065 0-3.592l-.319-.094a.873.873 0 0 1-.52-1.255l.16-.292c.893-1.64-.902-3.433-2.541-2.54l-.292.159a.873.873 0 0 1-1.255-.52l-.094-.319zm-2.633.283c.246-.835 1.428-.835 1.674 0l.094.319a1.873 1.873 0 0 0 2.693 1.115l.291-.16c.764-.415 1.6.42 1.184 1.185l-.159.292a1.873 1.873 0 0 0 1.116 2.692l.318.094c.835.246.835 1.428 0 1.674l-.319.094a1.873 1.873 0 0 0-1.115 2.693l.16.291c.415.764-.42 1.6-1.185 1.184l-.291-.159a1.873 1.873 0 0 0-2.693 1.116l-.094.318c-.246.835-1.428.835-1.674 0l-.094-.319a1.873 1.873 0 0 0-2.692-1.115l-.292.16c-.764.415-1.6-.42-1.184-1.185l.159-.291A1.873 1.873 0 0 0 1.945 8.93l-.319-.094c-.835-.246-.835-1.428 0-1.674l.319-.094A1.873 1.873 0 0 0 3.06 4.377l-.16-.292c-.415-.764.42-1.6 1.185-1.184l.292.159a1.873 1.873 0 0 0 2.692-1.115l.094-.319z"/>
+                        </svg>
+                    </button>
+
+                    <div class="menu shadow-sm">
+                        <button type="button" class="menu-item edit-med-btn"
+                                command="show-modal"
+                                commandfor="addMedicineModal"
+                                data-id="{{ med.id }}"
+                                data-name="{{ med.name }}"
+                                data-dosage="{{ med.dose }}"
+                                data-frequency="{{ med.frequency }}"
+                                data-schedules='[{% for s in med.schedules.all %}{"id":{{ s.id }},"time":"{{ s.time|time:"H:i" }}"}{% if not forloop.last %},{% endif %}{% endfor %}]'
+                                data-url="{% url 'tracker:api-medicines-detail' med.id %}">
+                            Редактировать
+                        </button>
+                        <hr class="menu-divider">
+                        <button type="button" class="menu-item theme-danger delete-med-btn"
+                                data-id="{{ med.id }}"
+                                data-url="{% url 'tracker:api-medicines-detail' med.id %}">
+                            Удалить
+                        </button>
+                    </div>
+                </div>
+
+                <p class="card-text text-muted small mb-1">Дозировка: {{ med.dose }}</p>
+                {% if med.schedules.exists %}
+                    <div class="card-text text-muted small mb-0">
+                        Прием по расписанию:
+                        {% for s in med.schedules.all %}
+                        <button type="button"
+                                class="badge border-0 py-1 px-2 schedule-status-btn
+                                    {% if s.status == 'completed' %}bg-success text-white
+                                    {% elif s.status == 'overdue' %}bg-danger text-white
+                                    {% else %}bg-secondary text-white{% endif %}"
+                                style="cursor: pointer;"
+                                title="{{ s.get_status_display }}"
+                                data-status="{{ s.status }}"
+                                data-url="{% url 'tracker:api-schedules-detail' s.id %}">
+                            {{ s.time|time:"H:i" }}
+                        </button>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="card-text text-muted small mb-0">Частота приема: {{ med.frequency }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-12 text-center py-5 text-body-secondary">
+        <p>У вас пока нет добавленных лекарств.</p>
+    </div>
+    {% endfor %}
+</div>
+
+{% include "tracker/_medicine_add_modal.html" %}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const dialog = document.getElementById('addMedicineModal');
+        const form = document.getElementById('addMedicineForm');
+        const errorDiv = document.getElementById('formErrors');
+        const dialogTitle = dialog.querySelector('.dialog-title');
+
+        const modeTextRadio = document.getElementById('modeText');
+        const modeScheduleRadio = document.getElementById('modeSchedule');
+        const textFreqBlock = document.getElementById('textFreqBlock');
+        const scheduleFreqBlock = document.getElementById('scheduleFreqBlock');
+        const timeInputsContainer = document.getElementById('timeInputsContainer');
+        const addTimeRowBtn = document.getElementById('addTimeRowBtn');
+
+        const medicinesListApiUrl = "{% url 'tracker:api-medicines-list' %}";
+        const schedulesListApiUrl = "{% url 'tracker:api-schedules-list' %}";
+        const csrfToken = form.querySelector('[name="csrfmiddlewaretoken"]')?.value;
+
+        let currentMethod = 'POST';
+        let currentUrl = medicinesListApiUrl;
+        let existingSchedules = [];
+
+        function toggleFreqMode(mode) {
+            if (mode === 'schedule') {
+                modeScheduleRadio.checked = true;
+                textFreqBlock.classList.add('d-none');
+                scheduleFreqBlock.classList.remove('d-none');
+                if (timeInputsContainer.children.length === 0) {
+                    addTimeRow('09:00');
+                }
+            } else {
+                modeTextRadio.checked = true;
+                scheduleFreqBlock.classList.add('d-none');
+                textFreqBlock.classList.remove('d-none');
+            }
+        }
+
+        function addTimeRow(value = '') {
+            const row = document.createElement('div');
+            row.className = 'd-flex gap-2 align-items-center';
+            row.innerHTML = '<input type="time" name="times[]" class="form-control" value="' + value + '" required>' +
+                '<button type="button" class="btn btn-outline-danger btn-sm remove-time-btn" title="Убрать">✕</button>';
+            row.querySelector('.remove-time-btn').addEventListener('click', () => {
+                if (timeInputsContainer.children.length > 1) {
+                    row.remove();
+                }
+            });
+            timeInputsContainer.appendChild(row);
+        }
+
+        modeTextRadio.addEventListener('change', () => toggleFreqMode('text'));
+        modeScheduleRadio.addEventListener('change', () => toggleFreqMode('schedule'));
+        addTimeRowBtn.addEventListener('click', () => addTimeRow(''));
+
+        // 1. ДОБАВЛЕНИЕ (POST)
+        document.getElementById('openAddModalBtn').addEventListener('click', function () {
+            form.reset();
+            currentMethod = 'POST';
+            currentUrl = medicinesListApiUrl;
+            existingSchedules = [];
+            errorDiv.textContent = '';
+            dialogTitle.textContent = 'Новое лекарство';
+            timeInputsContainer.innerHTML = '';
+            toggleFreqMode('text');
+        });
+
+        // 2. РЕДАКТИРОВАНИЕ (PATCH)
+        document.querySelectorAll('.edit-med-btn').forEach(btn => {
+            btn.addEventListener('click', function () {
+                form.reset();
+                errorDiv.textContent = '';
+                currentMethod = 'PATCH';
+                currentUrl = this.dataset.url;
+                dialogTitle.textContent = 'Редактировать лекарство';
+
+                form.querySelector('[name="name"]').value = this.dataset.name || '';
+                form.querySelector('[name="dosage"]').value = this.dataset.dosage || '';
+                timeInputsContainer.innerHTML = '';
+
+                existingSchedules = JSON.parse(this.dataset.schedules || '[]');
+                if (existingSchedules.length > 0) {
+                    existingSchedules.forEach(s => addTimeRow(s.time));
+                    toggleFreqMode('schedule');
+                } else {
+                    form.querySelector('[name="frequency"]').value = this.dataset.frequency || '';
+                    toggleFreqMode('text');
+                }
+            });
+        });
+
+        function formatDrfErrors(errObj) {
+            if (!errObj || typeof errObj !== 'object') return 'Ошибка валидации';
+            return Object.entries(errObj)
+                .map(([field, msgs]) => Array.isArray(msgs) ? msgs.join(', ') : msgs)
+                .join('; ');
+        }
+
+        // 3. ОТПРАВКА ФОРМЫ (JSON + POST/PATCH)
+        form.addEventListener('submit', async function (e) {
+            e.preventDefault();
+            errorDiv.textContent = '';
+
+            const isSchedule = modeScheduleRadio.checked;
+            const times = Array.from(timeInputsContainer.querySelectorAll('input'))
+                .map(inp => inp.value.trim())
+                .filter(Boolean);
+
+            if (isSchedule && times.length === 0) {
+                errorDiv.textContent = 'Укажите хотя бы одно время приема';
+                return;
+            }
+            if (!isSchedule && !form.querySelector('[name="frequency"]').value.trim()) {
+                errorDiv.textContent = 'Укажите частоту приема';
+                return;
+            }
+
+            const payload = {
+                name: form.querySelector('[name="name"]').value,
+                dose: form.querySelector('[name="dosage"]').value,
+                frequency: isSchedule ? '' : form.querySelector('[name="frequency"]').value,
+            };
+
+            try {
+                const medResponse = await fetch(currentUrl, {
+                    method: currentMethod,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const medData = await medResponse.json();
+
+                if (!medResponse.ok) {
+                    errorDiv.textContent = formatDrfErrors(medData);
+                    return;
+                }
+
+                const uniqueTimes = [...new Set(times)];
+                if (isSchedule) {
+                    for (const oldS of existingSchedules) {
+                        if (!uniqueTimes.includes(oldS.time)) {
+                            await fetch(schedulesListApiUrl + oldS.id + '/', {
+                                method: 'DELETE',
+                                headers: { 'X-CSRFToken': csrfToken }
+                            });
+                        }
+                    }
+                    const existingTimesSet = new Set(existingSchedules.map(s => s.time));
+                    for (const t of uniqueTimes) {
+                        if (!existingTimesSet.has(t)) {
+                            await fetch(schedulesListApiUrl, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRFToken': csrfToken
+                                },
+                                body: JSON.stringify({ medicine: medData.id, time: t })
+                            });
+                        }
+                    }
+                } else {
+                    for (const oldS of existingSchedules) {
+                        await fetch(schedulesListApiUrl + oldS.id + '/', {
+                            method: 'DELETE',
+                            headers: { 'X-CSRFToken': csrfToken }
+                        });
+                    }
+                }
+
+                dialog.close();
+                location.reload();
+            } catch (error) {
+                errorDiv.textContent = 'Ошибка соединения с сервером';
+            }
+        });
+
+        // 4. УДАЛЕНИЕ (DELETE)
+        document.querySelectorAll('.delete-med-btn').forEach(btn => {
+            btn.addEventListener('click', async function () {
+                const medId = this.dataset.id;
+                const response = await fetch(this.dataset.url, {
+                    method: 'DELETE',
+                    headers: { 'X-CSRFToken': csrfToken }
+                });
+                if (response.status === 204 || response.ok) {
+                    document.getElementById('medicine-card-' + medId)?.remove();
+                    if (document.querySelectorAll('[id^="medicine-card-"]').length === 0) {
+                        location.reload();
+                    }
+                }
+            });
+        });
+
+        // 5. СТАТУС ПРИЕМА (PATCH)
+        document.querySelectorAll('.schedule-status-btn').forEach(btn => {
+            btn.addEventListener('click', async function () {
+                const nextStatus = this.dataset.status === 'completed' ? 'planned' : 'completed';
+
+                const response = await fetch(this.dataset.url, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ status: nextStatus })
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    this.dataset.status = data.status;
+                    this.title = data.status_display;
+                    this.classList.remove('bg-secondary', 'bg-success', 'bg-danger');
+
+                    if (data.status === 'completed') {
+                        this.classList.add('bg-success');
+                    } else if (data.status === 'overdue') {
+                        this.classList.add('bg-danger');
+                    } else {
+                        this.classList.add('bg-secondary');
+                    }
+                }
+            });
+        });
+    });
+</script>
+
+{% endblock %}
