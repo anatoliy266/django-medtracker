@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/6.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.1/ref/settings/
 """
-
+from celery.schedules import crontab
 from pathlib import Path
 import os
 
@@ -161,3 +161,19 @@ LOGIN_REDIRECT_URL = 'tracker:medicine_list'        # После успешно�
 LOGOUT_REDIRECT_URL = 'accounts:login'   # После выхода — снова на логин
 
 DATABASE_ROUTERS = ['settings.db_router.LogsRouter']
+
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://django-redis:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE  # использует твой часовой пояс из settings.py
+
+CELERY_BEAT_SCHEDULE = {
+    'check-overdue-medicines-every-5-minutes': {
+        'task': 'apps.tracker.tasks.check_overdue_medicines',
+        'schedule': crontab(minute='*/5'),  # каждые 5 минут
+    },
+    'reset-daily-schedules-at-midnight': {
+        'task': 'apps.tracker.tasks.reset_daily_schedules',
+        'schedule': crontab(hour=0, minute=1),  # каждый день в 00:01
+    },
+}

@@ -4,3 +4,5 @@ redis>=5.0.0
 gunicorn>=23.0.0
 whitenoise>=6.8.0
 djangorestframework>=3.18
+celery[redis]>=5.4,<6.0
+packaging>=24.0

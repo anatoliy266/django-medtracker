@@ -54,6 +54,47 @@ services:
     restart: unless-stopped
     networks:
       - cluster
+  celery-worker:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.web
+    container_name: django-celery-worker
+    command: celery -A settings worker --loglevel=info
+    volumes:
+      - ./medtracker:/web/medtracker
+      - ./requirements.txt:/web/medtracker/requirements.txt
+      - pip_cache:/root/.cache/pip
+    env_file:
+      - .env
+    depends_on:
+      web:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - cluster
+
+  celery-beat:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.web
+    container_name: django-celery-beat
+    command: celery -A settings beat --loglevel=info
+    volumes:
+      - ./medtracker:/web/medtracker
+      - ./requirements.txt:/web/medtracker/requirements.txt
+      - pip_cache:/root/.cache/pip
+    env_file:
+      - .env
+    depends_on:
+      web:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - cluster
 
 volumes:
   postgres_data:

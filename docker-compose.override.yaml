@@ -3,6 +3,15 @@ services:
     networks:
       - cluster
       - warp-net
+  celery-worker:
+    networks:
+      - cluster
+      - warp-net
+
+  celery-beat:
+    networks:
+      - cluster
+      - warp-net
 
 networks:
   warp-net:
